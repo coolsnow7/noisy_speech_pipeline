@@ -1,0 +1,8 @@
+﻿# Byte-code cache
+__pycache__/
+
+# Coverage reports
+.coverage
+
+# Virtual env (in-project)
+.venv/
