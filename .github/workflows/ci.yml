@@ -7,6 +7,8 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.13"]
+    outputs:
+      coverage_path: ${{ steps.cov.outputs.coverage_path }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -15,16 +17,23 @@ jobs:
       - run: pip install poetry
       - run: poetry install
       - run: poetry run pytest -q --cov=noisy_speech_pipeline --cov-report=xml
-      - name: Upload coverage artifact
-        uses: actions/upload-artifact@v4
+        id: cov
+        # record the path for downstream job (works even if same for all)
+        env:
+          COVERAGE_PATH: coverage.xml
+        continue-on-error: false
+
+  # ── single uploader job depends on the 3.13 build ────────────────
+  upload-coverage:
+    needs: build
+    if: ${{ needs.build.outputs.python-version == '3.13' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
         with:
           name: coverage-xml
-          path: coverage.xml
-
-      - run: poetry run pytest -q --cov=noisy_speech_pipeline --cov-report=xml
-      - name: Upload coverage artifact
-        if: ${{ matrix.python-version == '3.13' }}      # 👈 only once
-        uses: actions/upload-artifact@v4
+          path: .
+      - uses: actions/upload-artifact@v4
         with:
           name: coverage-xml
           path: coverage.xml
