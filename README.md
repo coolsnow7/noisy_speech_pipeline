@@ -1,3 +1,3 @@
 # noisy_speech_pipeline
 
-[![CI](https://github.com/<user>/noisy-speech-pipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/<user>/noisy-speech-pipeline/actions/workflows/ci.yml)
+[![CI (Python matrix)](https://github.com/coolsnow7/noisy_speech_pipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/coolsnow7/noisy_speech_pipeline/actions/workflows/ci.yml)
