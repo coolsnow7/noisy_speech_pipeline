@@ -1,0 +1,1 @@
+{"config":{"lang":["en"],"separator":"[\\s\\-]+","pipeline":["stopWordFilter"]},"docs":[{"location":"","title":"Home","text":""},{"location":"#noisy-speech-pipelinenrobust-asr-for-real-world-recordings","title":"Noisy Speech Pipeline\\nRobust ASR for real-world recordings.","text":""},{"location":"reference/","title":"API Reference","text":""}]}
