@@ -9,3 +9,6 @@ __pycache__/
 site/
 data/raw/
 VOiCES_*.tar.gz
+VOiCES_*.tar.gz
+*.part
+*.tmp
