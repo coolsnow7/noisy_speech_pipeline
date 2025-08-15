@@ -34,6 +34,9 @@ nbconvert = "^7.16.6"
 ipykernel = "^6.30.0"
 mkdocs = "^1.6.1"
 mkdocs-material = "^9.6.16"
+tqdm = "^4.67.1"
+polars = "^1.32.0"
+soundfile = "^0.13.1"
 
 
 [tool.poetry.group.docs.dependencies]
