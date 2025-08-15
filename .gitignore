@@ -7,3 +7,5 @@ __pycache__/
 # Virtual env (in-project)
 .venv/
 site/
+data/raw/
+VOiCES_*.tar.gz
