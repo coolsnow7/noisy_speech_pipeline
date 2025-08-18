@@ -12,3 +12,5 @@ VOiCES_*.tar.gz
 VOiCES_*.tar.gz
 *.part
 *.tmp
+local/airflow/logs/
+local/airflow/plugins/
