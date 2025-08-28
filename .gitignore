@@ -14,3 +14,6 @@ VOiCES_*.tar.gz
 *.tmp
 local/airflow/logs/
 local/airflow/plugins/
+data/triage.parquet
+local/airflow/logs/
+local/airflow/plugins/
