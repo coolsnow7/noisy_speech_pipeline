@@ -42,3 +42,6 @@ soundfile = "^0.13.1"
 [tool.poetry.group.docs.dependencies]
 mkdocstrings = {extras = ["python"], version = "^0.29.1"}
 
+[tool.flake8]
+max-line-length = 88
+extend-ignore = ["E203", "W503"]  # matches Black's style
