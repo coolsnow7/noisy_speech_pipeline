@@ -1,10 +1,21 @@
 site_name: Noisy Speech Pipeline Docs
+site_description: "Robust ASR for real-world recordings"
 site_url: https://coolsnow7.github.io/noisy_speech_pipeline/
 repo_url: https://github.com/coolsnow7/noisy_speech_pipeline
 repo_name: noisy_speech_pipeline
-docs_dir: docs            # where your markdown files live
+
+docs_dir: docs
+
 theme:
-  name: material          # needs mkdocs-material, already added above
+  name: material
+  features:
+    - navigation.sections
+
+plugins:
+  - search
+  - mkdocstrings
+
 nav:
   - Home: index.md
-  - Data quality: data_quality.md
+  - Data quality: data_quality.md   # keep if docs/data_quality.md exists
+  - API Reference: reference.md     # keep if docs/reference.md exists
