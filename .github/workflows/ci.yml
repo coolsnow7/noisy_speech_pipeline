@@ -1,27 +1,53 @@
-name: CI (Python matrix)
-on: [push, pull_request]
+# .github/workflows/CI.yml
+name: CI (Python + Poetry)
+
+on:
+  push:        # run on any branch
+  pull_request:
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.13"]        # only one interpreter for now
+        python-version: ["3.13"]  # match your local env; add 3.12 if needed later
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+          cache: "pip"
 
-      - run: pip install poetry
-      - run: poetry install
+      # Poetry install (with cache)
+      - name: Install Poetry
+        run: pip install --upgrade pip poetry
 
-      # run tests + generate coverage.xml
-      - run: poetry run pytest -q --cov=noisy_speech_pipeline --cov-report=xml
+      - name: Cache Poetry virtualenv
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pypoetry/virtualenvs
+          key: venv-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('poetry.lock') }}
+          restore-keys: |
+            venv-${{ runner.os }}-${{ matrix.python-version }}-
 
-      # single upload step — no conflicts
-      - name: Upload coverage artifact
+      - name: Install deps
+        run: poetry install --no-interaction --no-ansi
+
+      # Lint gates (to mirror your pre-commit)
+      - name: Black (check)
+        run: poetry run black --check .
+      - name: isort (check)
+        run: poetry run isort --check-only .
+      - name: flake8
+        run: poetry run flake8 .
+
+      # Tests + coverage
+      - name: Pytest (coverage)
+        run: poetry run pytest -q --cov=noisy_speech_pipeline --cov-report=xml
+
+      - name: Upload coverage.xml
         uses: actions/upload-artifact@v4
         with:
           name: coverage-xml
