@@ -1,4 +1,4 @@
-version: "3.8"
+
 services:
   airflow:
     build: 
@@ -9,8 +9,22 @@ services:
       AIRFLOW__CORE__LOAD_EXAMPLES: "False"
       AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
     volumes:
-      # mount your repo's DAGs and data into the container
+      # mount repo's DAGs and data into the container
       - ../../airflow_dags:/opt/airflow/dags
       - ../../data:/opt/airflow/data
     ports:
       - "8080:8080"
+  review_ui:
+    build: .
+    command: >
+      bash -lc "poetry run streamlit run scripts/review_triage.py
+      --server.port=8501 --server.address=0.0.0.0 --server.runOnSave=true"
+    ports:
+      - "8501:8501"
+    volumes:
+      - .:/app          # mount the whole repo into the container
+      - ../../data:/app/data
+    environment:
+      - STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
+      - PYTHONUNBUFFERED=1
+      

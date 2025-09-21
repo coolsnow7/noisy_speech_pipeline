@@ -1,0 +1,8 @@
+key,decision,timestamp,reviewer,notes
+raw/voices/VOiCES_devkit/distant-16k/speech/test/rm3/babb/sp4195/Lab41-SRI-VOiCES-rm3-babb-sp4195-ch186236-sg0015-mc05-stu-far-dg040.wav,Accept,2025-09-19T02:26:33+00:00,DR,
+raw/voices/VOiCES_devkit/distant-16k/speech/test/rm3/musi/sp0667/Lab41-SRI-VOiCES-rm3-musi-sp0667-ch105002-sg0034-mc05-stu-far-dg150.wav,Accept,2025-09-19T22:53:27+00:00,DR,
+raw/voices/VOiCES_devkit/distant-16k/speech/test/rm4/babb/sp4731/Lab41-SRI-VOiCES-rm4-babb-sp4731-ch095875-sg0022-mc05-stu-far-dg180.wav,Review,2025-09-19T02:23:58+00:00,DR,
+raw/voices/VOiCES_devkit/distant-16k/speech/test/rm4/tele/sp1641/Lab41-SRI-VOiCES-rm4-tele-sp1641-ch130503-sg0006-mc01-stu-clo-dg120.wav,Accept,2025-09-19T03:08:44+00:00,DR,
+raw/voices/VOiCES_devkit/distant-16k/speech/train/rm3/none/sp2156/Lab41-SRI-VOiCES-rm3-none-sp2156-ch017942-sg0029-mc05-stu-far-dg080.wav,Review,2025-09-19T02:23:58+00:00,DR,
+raw/voices/VOiCES_devkit/distant-16k/speech/train/rm4/babb/sp0472/Lab41-SRI-VOiCES-rm4-babb-sp0472-ch129979-sg0009-mc01-stu-clo-dg180.wav,Accept,2025-09-19T22:26:17+00:00,DR,
+raw/voices/VOiCES_devkit/distant-16k/speech/train/rm4/tele/sp7867/Lab41-SRI-VOiCES-rm4-tele-sp7867-ch110528-sg0013-mc01-stu-clo-dg100.wav,Accept,2025-09-19T03:08:44+00:00,DR,
