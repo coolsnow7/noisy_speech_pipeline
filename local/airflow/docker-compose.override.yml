@@ -1,8 +1,8 @@
 services:
   review_ui:
     build:
-      context: ../..                 # <- repo root (two levels up from local/airflow)
-      dockerfile: local/airflow/Dockerfile  # <- path is relative to context above
+      context: ../..
+      dockerfile: local/airflow/Dockerfile
     working_dir: /app
     command: >
       bash -lc "pip install --no-cache-dir streamlit watchdog &&
@@ -10,8 +10,22 @@ services:
       --server.port=8501 --server.address=0.0.0.0 --server.runOnSave=true"
     ports:
       - "8501:8501"
-    volumes:
-      - ../..:/app                   # <- mount repo root so /app/data is visible
     environment:
-      - STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
-      - PYTHONUNBUFFERED=1
+      STREAMLIT_BROWSER_GATHER_USAGE_STATS: "false"
+      PYTHONUNBUFFERED: "1"
+      PYTHONPATH: /app/src
+    volumes:
+      - ../..:/app   # repo root → /app (includes /app/src and /app/data)
+
+  airflow:
+    build:
+      context: ../..
+      dockerfile: local/airflow/Dockerfile
+    working_dir: /app
+    environment:
+      PYTHONPATH: /app/src
+    volumes:
+      - ../..:/app
+      - ./airflow_dags:/opt/airflow/dags
+    ports:
+      - "8080:8080"
