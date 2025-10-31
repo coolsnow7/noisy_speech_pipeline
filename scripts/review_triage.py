@@ -362,3 +362,48 @@ st.write(f"Progress: {part_done + 1} / {N}  ·  {pct:.1%} Reviewed")
 # )
 # show metadata table
 # st.dataframe(meta_df, hide_index=True, use_container_width=True)
+
+# --- Progress bar ---
+
+DATA_DIR = Path("data")
+MANIFEST = DATA_DIR / "voices_manifest_enriched.parquet"
+DECISIONS = DATA_DIR / "triage_decisions.csv"
+DECIDED_VALUES = ["Accept", "Reject", "Review"]
+
+if DECISIONS.exists():
+    latest = pl.read_csv(str(DECISIONS))
+    if {"key", "decision"}.issubset(set(latest.columns)):
+        done = (
+            latest.select(
+                pl.col("key").cast(pl.Utf8),
+                pl.col("decision").cast(pl.Utf8),
+            )
+            .filter(pl.col("decision").is_in(DECIDED_VALUES))
+            .select("key")
+            .unique()
+            .height
+        )
+    else:
+        done = 0
+else:
+    done = 0
+
+
+def load_manifest_keys_simple() -> pl.Series:
+    if not MANIFEST.exists():
+        st.warning(f"Missing manifest: {MANIFEST}")
+        return pl.Series([], dtype=pl.Utf8)
+    # unique keys in scope
+    return (
+        pl.scan_parquet(str(MANIFEST))
+        .select(pl.col("key").cast(pl.Utf8))
+        .unique()
+        .collect()["key"]
+    )
+
+
+total = load_manifest_keys_simple().n_unique()
+pct = round((done / total), 2) if total > 0 else 0.0
+
+progress_text = "Samples Reviewed From Entire Dataset"
+my_bar = st.progress(pct, text=f"{progress_text} {pct}%   ·  {done}/{total}")
