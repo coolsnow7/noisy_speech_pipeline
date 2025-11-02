@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import fcntl
 import os
 import time
+from contextlib import contextmanager
 from datetime import datetime, timezone
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any, Dict
 
 import pandas as pd
@@ -13,11 +15,51 @@ import streamlit as st
 TRIAGE_PARQUET = Path("data/triage.parquet")
 AUDIO_CANDIDATE_COLS = ["audio_path", "path", "filepath", "audio_file"]
 WRITE_PATH = Path("data/triage_review.csv")  # output manifest
+DATA_DIR = Path("data")
+DECISIONS = DATA_DIR / "triage_decisions.csv"
 
 
 @st.cache_data(show_spinner=False)
 def load_triage_df(path: Path) -> pl.DataFrame:
     return pl.read_parquet(path)
+
+
+# This section is all about locked CSV read/write
+@contextmanager
+def _csv_flock(csv_path: Path):
+    csv_path.parent.mkdir(parents=True, exist_ok=True)
+    # open the real CSV file handle (create if missing)
+    fd = os.open(csv_path, os.O_RDWR | os.O_CREAT)
+    try:
+        with os.fdopen(fd, "r+b", buffering=0) as f:
+            fcntl.flock(f.fileno(), fcntl.LOCK_EX)  # block until exclusive
+            yield f  # you don't have to use f; lock is held until exit
+    finally:
+        # fd is closed by the context manager; flock releases automatically
+        pass
+
+
+def read_decisions_locked() -> pl.DataFrame:
+    # Reads don't strictly need a lock, but doing so avoids read-while-write glitches.
+    with _csv_flock(DECISIONS):
+        if not DECISIONS.exists() or DECISIONS.stat().st_size == 0:
+            return pl.DataFrame(
+                {
+                    "key": [],
+                    "decision": [],
+                    "timestamp": [],
+                    "reviewer": [],
+                    "notes": [],
+                }
+            )
+        return pl.read_csv(str(DECISIONS))
+
+
+def write_decisions_locked(df: pl.DataFrame) -> None:
+    tmp = DECISIONS.with_suffix(DECISIONS.suffix + ".tmp")
+    with _csv_flock(DECISIONS):
+        df.write_csv(str(tmp))
+        os.replace(tmp, DECISIONS)  # atomic
 
 
 # This whole section deals with paths for the audio files #
@@ -73,6 +115,19 @@ def key_to_path(column_name):
     audio_path = cand1 if cand1.exists() else cand2
 
     return audio_path, raw_val
+
+
+def normalize_key(key: str, drop_prefix: str = "data/") -> str:
+    if key is None:
+        return ""
+    k = str(key).strip().replace("\\", "/")  # Windows → POSIX
+    if k.startswith(drop_prefix):
+        k = k[len(drop_prefix) :]
+    # keep case by default; uncomment next line if you want case-insensitive keys
+    # k = k.lower()
+    # collapse any accidental '//' after replacements
+    k = str(PurePosixPath(k))
+    return k
 
 
 CSV_PATH = Path("data/triage_decisions.csv")
@@ -253,6 +308,30 @@ def _now_iso() -> str:
 st.caption(f"CSV path: {(Path.cwd() / 'data/triage_decisions.csv').resolve()}")
 
 
+@contextmanager
+def _csv_lock(csv_path: Path, timeout_s: float = 3.0, poll_s: float = 0.05):
+    lock_path = csv_path.with_suffix(csv_path.suffix + ".lock")
+    start = time.time()
+    # acquire
+    while True:
+        try:
+            fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            os.close(fd)
+            break
+        except FileExistsError:
+            if time.time() - start > timeout_s:
+                raise TimeoutError(f"Could not acquire lock: {lock_path}")
+            time.sleep(poll_s)
+    try:
+        yield
+    finally:
+        # release
+        try:
+            os.remove(lock_path)
+        except FileNotFoundError:
+            pass
+
+
 def save_decisions(
     decisions: Dict[str, Any],
     csv_path: Path = Path("data/triage_decisions.csv"),
@@ -269,6 +348,7 @@ def save_decisions(
     for key, val in decisions.items():
         if not key:
             continue
+        key_n = normalize_key(key)  # boundary normalization
         if isinstance(val, dict):
             decision = val.get("decision")
             ts = val.get("timestamp") or _now_iso()
@@ -281,7 +361,7 @@ def save_decisions(
             continue
         rows.append(
             {
-                "key": key,
+                "key": key_n,
                 "decision": decision,
                 "timestamp": ts,
                 "reviewer": rev,
@@ -293,22 +373,27 @@ def save_decisions(
         rows, columns=["key", "decision", "timestamp", "reviewer", "notes"]
     )
 
-    if csv_path.exists():
-        old_df = pd.read_csv(csv_path)
-        all_df = pd.concat([old_df, new_df], ignore_index=True)
-    else:
-        csv_path.parent.mkdir(parents=True, exist_ok=True)
-        all_df = new_df
-
-    # keep latest per key (ISO timestamps sort correctly as strings)
-    if not all_df.empty:
-        all_df = all_df.sort_values(["key", "timestamp"]).drop_duplicates(
-            subset="key", keep="last"
-        )
-
+    # --- flocked read/merge/atomic write ---
     tmp_path = csv_path.with_suffix(csv_path.suffix + ".tmp")
-    all_df.to_csv(tmp_path, index=False)
-    os.replace(tmp_path, csv_path)
+
+    with _csv_flock(csv_path):
+        if csv_path.exists() and csv_path.stat().st_size > 0:
+            old_df = pd.read_csv(csv_path)
+            if not old_df.empty and "key" in old_df.columns:
+                old_df["key"] = old_df["key"].astype(str).map(normalize_key)
+            all_df = pd.concat([old_df, new_df], ignore_index=True)
+        else:
+            all_df = new_df
+
+        if not all_df.empty:
+            # ISO timestamps sort lexicographically; keep last per key
+            all_df = all_df.sort_values(["key", "timestamp"]).drop_duplicates(
+                subset="key", keep="last"
+            )
+
+        all_df.to_csv(tmp_path, index=False)
+        os.replace(tmp_path, csv_path)  # atomic on Linux/NTFS inside Docker
+
     return int(all_df["key"].nunique()) if not all_df.empty else 0
 
 
@@ -365,13 +450,11 @@ st.write(f"Progress: {part_done + 1} / {N}  ·  {pct:.1%} Reviewed")
 
 # --- Progress bar ---
 
-DATA_DIR = Path("data")
 MANIFEST = DATA_DIR / "voices_manifest_enriched.parquet"
-DECISIONS = DATA_DIR / "triage_decisions.csv"
 DECIDED_VALUES = ["Accept", "Reject", "Review"]
 
 if DECISIONS.exists():
-    latest = pl.read_csv(str(DECISIONS))
+    latest = read_decisions_locked()
     if {"key", "decision"}.issubset(set(latest.columns)):
         done = (
             latest.select(
